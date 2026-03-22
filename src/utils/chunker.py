@@ -1,51 +1,48 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from typing import List, Dict
+from typing import List, Dict, Tuple
+import uuid
 
 
 class Chunker:
 
     def __init__(self):
-        # Multi-level chunkers
-        self.small_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=200,
-            chunk_overlap=40
+        # Parent (large context)
+        self.parent_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1200,
+            chunk_overlap=200
         )
 
-        self.medium_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=80
+        # Child (retrieval precision)
+        self.child_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=250,
+            chunk_overlap=50
         )
 
-        self.large_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=150
-        )
+    def chunk(self, text: str, doc_id: str) -> Tuple[List[Dict], List[Dict]]:
+        parents = []
+        children = []
 
-    def chunk(self, text: str) -> List[Dict]:
-        chunks = []
+        parent_chunks = self.parent_splitter.split_text(text)
 
-        # Small chunks
-        for c in self.small_splitter.split_text(text):
-            chunks.append({
-                "text": c,
-                "chunk_type": "small",
-                "chunk_size": 200
+        for parent_text in parent_chunks:
+            parent_id = str(uuid.uuid4())
+
+            # Store parent
+            parents.append({
+                "parent_id": parent_id,
+                "doc_id": doc_id,
+                "text": parent_text
             })
 
-        # Medium chunks
-        for c in self.medium_splitter.split_text(text):
-            chunks.append({
-                "text": c,
-                "chunk_type": "medium",
-                "chunk_size": 500
-            })
+            # Create child chunks from parent
+            child_chunks = self.child_splitter.split_text(parent_text)
 
-        # Large chunks
-        for c in self.large_splitter.split_text(text):
-            chunks.append({
-                "text": c,
-                "chunk_type": "large",
-                "chunk_size": 1000
-            })
+            for child_text in child_chunks:
+                children.append({
+                    "chunk_id": str(uuid.uuid4()),
+                    "parent_id": parent_id,
+                    "doc_id": doc_id,
+                    "text": child_text
+                })
 
-        return chunks
+        return parents, children
