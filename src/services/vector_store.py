@@ -23,7 +23,7 @@ class VectorStore:
         
         logging.info("Added %d embeddings to vector store. Total stored embeddings: %d %d", len(embeddings), len(self.texts_store),len(self.metadata_store))
 
-    def search(self, query_embedding, k=3):
+    def search(self, query_embedding, k=10):
         query_embedding = np.array(query_embedding).astype("float32")
         logger.info(f"Query shape: {query_embedding.shape}")
         logger.info(f"Index total vectors: {self.index.ntotal}")
