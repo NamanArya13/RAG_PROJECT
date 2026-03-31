@@ -1,19 +1,30 @@
-from services.embeddings import EmbeddingService
-from core.storage import VectorStore
-from core.storage import ParentStore
+import logging
+from src.services.embeddings import EmbeddingService
+from src.core.storage import vector_store, parent_store
+from fastapi import APIRouter
+from pydantic import BaseModel
+import numpy as np
 
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/query", tags=["Query"])
+
+class QueryRequest(BaseModel):
+    query: str
 
 embedder = EmbeddingService()
-vector_store = VectorStore()
-parent_store = ParentStore()
 
-
-def query_rag(query: str):
+@router.post("/")
+def query_rag(query: QueryRequest):
     # Step 1: Embed query
-    query_embedding = embedder.embed([query])
+    query_embedding = embedder.embed([query.query])
+    query_embedding = np.array(query_embedding).astype("float32").reshape(1, -1)
 
     # Step 2: Search child chunks
-    results = vector_store.search(query_embedding, k=10)
+    results = vector_store.search(query_embedding, k=3)
+    logger.info("Search results for query %r: %s", query.query, results)
 
     # Step 3: Collect parent IDs
     parent_ids = set()
